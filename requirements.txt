@@ -4,3 +4,9 @@ groq>=0.9.0
 python-dotenv>=1.0.0
 eventlet>=0.33.3
 gunicorn>=20.1.0
+
+# Development and Testing Dependencies
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+flake8>=6.0.0
