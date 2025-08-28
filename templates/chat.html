@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand-Drawn Style Chatbot</title>
+    <script src="https://cdn.socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Kalam', cursive;
+            background: linear-gradient(135deg, #f9f7ed 0%, #e8f5e9 50%, #fff8e1 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #66bb6a, #8bc34a);
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+            transform: rotate(-0.5deg);
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #fff;
+            text-shadow: 2px 2px 0 #4caf50;
+            font-size: 2.5rem;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            position: relative;
+            transform: rotate(0.3deg);
+            min-height: 300px;
+            max-height: calc(100vh - 250px);
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            justify-content: flex-end;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 15px;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+        }
+        
+        .user-message .message-bubble {
+            background: linear-gradient(135deg, #a5d6a7, #81c784);
+            border-bottom-right-radius: 5px;
+            transform: rotate(-0.5deg);
+        }
+        
+        .bot-message .message-bubble {
+            background: linear-gradient(135deg, #fff59d, #ffeb3b);
+            border-bottom-left-radius: 5px;
+            transform: rotate(0.5deg);
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+        }
+        
+        .user-avatar {
+            background: linear-gradient(135deg, #4caf50, #8bc34a);
+            order: 2;
+        }
+        
+        .bot-avatar {
+            background: linear-gradient(135deg, #ffc107, #ff9800);
+        }
+        
+        .message-content {
+            font-size: 1.1rem;
+            line-height: 1.4;
+        }
+        
+        .message-timestamp {
+            font-size: 0.8rem;
+            color: #777;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            transform: rotate(-0.3deg);
+        }
+        
+        .message-input {
+            flex: 1;
+            border: none;
+            padding: 15px;
+            font-family: 'Kalam', cursive;
+            font-size: 1.1rem;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 20px;
+            outline: none;
+            box-shadow: inset 2px 2px 0 rgba(0,0,0,0.1);
+        }
+        
+        .send-button {
+            width: 50px;
+            height: 50px;
+            border: none;
+            background: linear-gradient(135deg, #66bb6a, #8bc34a);
+            color: white;
+            border-radius: 50%;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #4caf50, #7cb342);
+        }
+        
+        .send-button:active {
+            transform: scale(0.95);
+        }
+        
+        .doodle {
+            position: absolute;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        
+        .doodle-1 {
+            top: 50px;
+            left: 20px;
+            font-size: 2rem;
+            transform: rotate(15deg);
+        }
+        
+        .doodle-2 {
+            bottom: 80px;
+            right: 30px;
+            font-size: 2.5rem;
+            transform: rotate(-10deg);
+        }
+        
+        .doodle-3 {
+            top: 150px;
+            right: 50px;
+            font-size: 1.8rem;
+            transform: rotate(5deg);
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 50px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-family: 'Kalam', cursive;
+        }
+        
+        .connected {
+            background: linear-gradient(135deg, #66bb6a, #8bc34a);
+        }
+        
+        .disconnected {
+            background: linear-gradient(135deg, #ef5350, #e53935);
+        }
+        
+        /* Custom scrollbar */
+        .messages-container::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #66bb6a, #8bc34a);
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #4caf50, #7cb342);
+        }
+    </style>
+</head>
+<body>
+    <!-- Playschool doodles -->
+    <div class="doodle doodle-1">🌿</div>
+    <div class="doodle doodle-2">☀️</div>
+    <div class="doodle doodle-3">🌻</div>
+    
+    <div class="header">
+        <h1>Playschool Chatbot</h1>
+    </div>
+    
+    <div class="chat-container">
+        <div class="messages-container" id="messagesContainer">
+            <!-- Messages will be added here -->
+        </div>
+        
+        <div class="input-container">
+            <input type="text" class="message-input" id="messageInput" placeholder="Type your message...">
+            <button class="send-button" id="sendButton">📤</button>
+        </div>
+    </div>
+    
+    <div class="connection-status connected" id="connectionStatus">
+        <span>●</span>
+        <span>Connected</span>
+    </div>
+
+    <script>
+        // Initialize socket connection
+        const socket = io();
+        let sessionId = null;
+        
+        // Handle connection
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            updateConnectionStatus(true);
+        });
+        
+        // Handle disconnection
+        socket.on('disconnect', () => {
+            console.log('Disconnected from server');
+            updateConnectionStatus(false);
+        });
+        
+        // Receive session ID
+        socket.on('session_id', (data) => {
+            sessionId = data.session_id;
+            console.log('Session ID:', sessionId);
+        });
+        
+        // Receive bot message
+        socket.on('bot_message', (data) => {
+            addMessage('bot', data.message, data.timestamp);
+        });
+        
+        // Handle errors
+        socket.on('error', (data) => {
+            console.error('Error:', data.message);
+            addMessage('bot', `Error: ${data.message}`, getTimestamp());
+        });
+        
+        // Send message when button is clicked
+        document.getElementById('sendButton').addEventListener('click', sendMessage);
+        
+        // Send message when Enter key is pressed
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Function to send message
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && sessionId) {
+                // Add user message to UI
+                addMessage('user', message, getTimestamp());
+                
+                // Send message to server
+                socket.emit('user_message', {
+                    session_id: sessionId,
+                    message: message
+                });
+                
+                // Clear input
+                input.value = '';
+                input.focus();
+            }
+        }
+        
+        // Function to add message to UI
+        function addMessage(sender, message, timestamp) {
+            const container = document.getElementById('messagesContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = `message-avatar ${sender}-avatar`;
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = message;
+            
+            const timestampDiv = document.createElement('div');
+            timestampDiv.className = 'message-timestamp';
+            timestampDiv.textContent = timestamp;
+            
+            bubble.appendChild(content);
+            bubble.appendChild(timestampDiv);
+            
+            if (sender === 'user') {
+                messageDiv.appendChild(bubble);
+                messageDiv.appendChild(avatar);
+            } else {
+                messageDiv.appendChild(avatar);
+                messageDiv.appendChild(bubble);
+            }
+            
+            container.appendChild(messageDiv);
+            
+            // Auto-scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Function to get current timestamp
+        function getTimestamp() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' + 
+                   now.getMinutes().toString().padStart(2, '0');
+        }
+        
+        // Function to update connection status
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.className = 'connection-status connected';
+                statusElement.innerHTML = '<span>●</span><span>Connected</span>';
+            } else {
+                statusElement.className = 'connection-status disconnected';
+                statusElement.innerHTML = '<span>●</span><span>Disconnected</span>';
+            }
+        }
+        
+        // Focus on input when page loads
+        window.onload = function() {
+            document.getElementById('messageInput').focus();
+        };
+    </script>
+</body>
+</html>
