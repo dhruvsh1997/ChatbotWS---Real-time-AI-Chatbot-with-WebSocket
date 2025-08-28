@@ -81,4 +81,4 @@ jobs:
     - name: Deploy notification
       run: |
         echo "🚀 Deployment triggered for commit ${{ github.sha }}"
-        # Add your deployment steps here (e.g., AWS ECS, Kubernetes, etc.)
+        # Add your deployment steps here compleatly (e.g., AWS ECS, Kubernetes, etc.)
